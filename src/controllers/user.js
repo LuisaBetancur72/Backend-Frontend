@@ -1,17 +1,20 @@
-
 const User = require("../models/user");
-
 const bcrypt = require("bcrypt");
+const image= require("../utils/image")
 
-async function createUser(req, res) {
+const createUser= async (req, res)=> {
+    
     try {
-        const { password } = req.body;
-        const user = new User({ ...req.body, active: false });
-        const salt = bcrypt.genSaltSync(10);
-        const hashpassword = bcrypt.hashSync(password, salt);
-        user.password = hashpassword;
-        if (req.avatar) {
-            user.avatar = req.avatar;
+        const userData = req.body;
+        const user= new User({...userData, active:false});
+
+        const salt =await bcrypt.genSalt(10);
+        const hashedPassword =await bcrypt.hash(userData.password,salt);
+
+        user.password=hashedPassword;
+        if(req.files.avatar){
+            const imagePath= image.getFilePath(req.files.avatar);
+            user.avatar= imagePath;
         }
         const userStored = await user.save();
         res.status(201).send(userStored);
@@ -20,56 +23,90 @@ async function createUser(req, res) {
     }
 }
 
-async function getUsers(req, res) {
-    const { active } = req.query;
-    let response = null;
-
-    if (active === undefined) {
-        response = await User.find();
-    } else {
-        response = await User.find({ active });
-    }
-    res.status(200).send(response);
-}
-
-async function getMe(req, res) {
-    const { user_id } = req.user;
-
-    const response = await User.findById(user_id);
-
-    if (!response) {
-        res.status(400).send({ msg: "No se ha encontrado usuario" });
-    } else {
+const getMe= async(req,res)=>{
+    try{
+        const{user_id}= req.user;
+        const response = await User.findById(user_id);
+        if(!response){
+            return res.status(400).send({msg: "No se ha encontrado usuario"});
+        }
         res.status(200).send(response);
-    } 
+    }
+    catch(error){
+        res.status(500).send({msg:"Error del servidor"});
+    }
+};
+
+const getUser= async(req, res)=>{
+    try{
+        const{ id }= req.params;
+        const response= await User.findById(id);
+        if(!response){
+            return res.status(400).send({msg: "No se encontro usuario"});
+        }
+        res.status(200).send(response);
+    }
+    catch (error){
+        res.status(500).send({msg: "Error del servidor"})
+    }
+};
+
+const getUsers= async(req, res)=>{
+    try{
+        const {active}= req.query;
+        let response= null;
+
+        if(active==undefined){
+            response= await User.find();
+        }else{
+            response=await User.find({active});
+        }
+        res.status(200).send(response)
+    }catch(error){
+        res.status(500).send({msg:"Error del servidor"})
+    }
+};
+
+const updateUser = async( req, res)=>{
+    try{
+        const {id}= req.params;
+        const userData= req.body;
+
+        if(userData.password){
+            const salt= bcrypt.genSaltSync(10);
+            const hashedPassword = bcrypt.hashSync(userData.password, salt);
+            userData.password= hashedPassword;
+        }else{
+            delete userData.password;
+        }
+
+        if(req.files && req.files.avatar){
+            const imagePath= image.getFilePath(req.files.avatar);
+            userData.avatar= imagePath;
+        }
+
+        await User.findByIdAndUpdate({_id:id}, userData);
+        res.status(200).send({msg: "Actualizacion correcta"});
+    }catch(error){
+        res.status(400).send({msg: "Error de actualizacion",error: error.message})
+
+    }
 }
 
-async function updateUser(req, res) {
-    try {
-        const { document } = req.params; // Obtiene el ID de los parámetros de la solicitud
-        const userDataEdit = req.body;
-        console.log(document, userDataEdit);
-        const response = await User.findByIdAndUpdate(document, userDataEdit);
-        console.log(response);
-        res.status(200).json({ message: "Actualización éxitosa" });
-    } catch (err) {
-    res.status(400).json({ message: err.message });
-  }
-}
 
-
-async function deleteUser(req, res) {
-    try {
-        const { document } = req.params;
-        await User.findByIdAndDelete(document);
-        res.status(200).send({ msg: "Usuario eliminado" });
-    } catch (error) {
-        res.status(400).send({ msg: "Error al eliminar el usuario", error: error.message });
+const deleteUser= async( req, res)=>{
+    try{
+        const {id}= req.params;
+        await User.findByIdAndDelete(id);
+        res.status(200).send({msg: "Usuario Eliminado"});
+    }catch(error){
+        res.status(400).send({msg: "Error al eliminar usuario"})
     }
 }
 
 module.exports = {
     getMe,
+    getUser,
     getUsers,
     createUser,
     updateUser,

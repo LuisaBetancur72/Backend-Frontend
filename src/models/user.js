@@ -9,7 +9,10 @@ const userSchema = new Schema({
     municipality: {type:String, required:true},
     document_type: {type:String, required:true},
     document: {type:String, required:true, unique:true},
-    email: {type:String, required:true, unique:true},
+    email: {type:String, required:true,validate:{validator:function(value){
+        return /.+@(gmail|outlook)\.(com)$/.test(value);
+    },message: 'Por favor ingrese un correo válido (solo se permiten correos de Gmail o Outlook)'
+    }, unique:true},
     password: {type:String, required:true},
     avatar: {type:String, null:false},
     active: {type:Boolean, default:false},

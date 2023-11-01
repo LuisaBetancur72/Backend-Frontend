@@ -17,10 +17,7 @@ app.use(bodyParser.urlencoded({extended:true}));
 el backend y el front end a la vez */
 app.use(cors());
 
-/* Pruebas de request utilizando postman */
-app.use(bodyParser.urlencoded({ extended: true }));
 app.use(`/api/${API_VERSION}/`, authRoutes);
 app.use(`/api/${API_VERSION}/user`, userRoutes);
-
 
 module.exports = app;
